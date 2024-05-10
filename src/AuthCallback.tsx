@@ -1,10 +1,14 @@
 import { useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { setToken } from "./store/connectionsSlice";
 
 export default function AuthCallback() {
   const searchParams = useSearchParams()[0];
   const location = useLocation();
   const navigate = useNavigate();
+
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const error = searchParams.get("error");
@@ -23,15 +27,18 @@ export default function AuthCallback() {
       throw new Error("service parameter missing");
     }
 
+    if (service != "twitch" && service != "spotify") {
+      throw new Error("Unrecognized service parameter: " + service);
+    }
+
     const accessToken = authResponse.get("access_token");
     if (!accessToken) {
       throw new Error("access_token missing in auth response");
     }
 
-    localStorage.setItem(`${service}:access_token`, accessToken);
-
+    dispatch(setToken({ service, token: accessToken }));
     navigate("/");
-  }, [location, searchParams, navigate]);
+  }, [location, searchParams, navigate, dispatch]);
 
   return <div>Doing auth...</div>;
 }

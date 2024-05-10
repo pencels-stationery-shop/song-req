@@ -6,7 +6,7 @@ export interface AuthParams {
 
 export const CALLBACK_PATH = "/auth-callback";
 
-const authParams = {
+export const AUTH_PARAMS = {
   twitch: {
     clientId: "2i3u6olpyofmt8tyg6c47esph0io2e",
     authUrl: "https://id.twitch.tv/oauth2/authorize",
@@ -19,8 +19,10 @@ const authParams = {
   },
 } satisfies Record<string, AuthParams>;
 
-export function getImplicitGrantUrl(service: keyof typeof authParams): string {
-  const params = authParams[service];
+export type Service = keyof typeof AUTH_PARAMS;
+
+export function getImplicitGrantUrl(service: Service): string {
+  const params = AUTH_PARAMS[service];
   return (
     params.authUrl +
     "?" +
