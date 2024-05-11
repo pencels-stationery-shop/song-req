@@ -50,55 +50,69 @@ export default function TwitchPanel() {
   return (
     <div className="flex flex-col p-4 rounded bg-violet-900 text-white">
       {token ? (
-        <div className="flex flex-col gap-2">
-          <div>Connected to Twitch</div>
-          {user && (
-            <div className="flex gap-2 items-center">
-              <img
-                src={user.profilePictureUrl}
-                className="w-6 h-6 rounded-full"
-              />
-              <p>{user.name}</p>
-              {online ? (
-                <div className="rounded text-xs px-1 py-0.5  bg-red-800">
-                  <span className="relative">LIVE</span>
-                </div>
-              ) : (
-                <div className="rounded text-xs p-1 bg-neutral-900/50">
-                  OFFLINE
+        <div className="flex flex-col h-full gap-3 justify-between">
+          <div className="flex flex-col gap-3">
+            <div>
+              <div className="mb-1">Connected to Twitch</div>
+              {user && (
+                <div className="flex gap-2 items-center">
+                  <img
+                    src={user.profilePictureUrl}
+                    className="w-6 h-6 rounded-full"
+                  />
+                  <p>{user.name}</p>
+                  {online ? (
+                    <div className="rounded text-xs px-1 py-0.5  bg-red-800">
+                      <span className="relative">LIVE</span>
+                    </div>
+                  ) : (
+                    <div className="rounded text-xs p-1 bg-neutral-900/50">
+                      OFFLINE
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-          {rewards && (
-            <select
-              className="p-1 rounded bg-violet-950"
-              value={rewardId}
-              onChange={(e) => dispatch(setRewardId(e.target.value))}
+            {rewards && (
+              <div className="flex flex-col">
+                <label htmlFor="redeem-select" className="text-sm mb-1">
+                  Select Song Redeem
+                </label>
+                <select
+                  id="redeem-select"
+                  className="p-1 rounded bg-violet-950"
+                  value={rewardId}
+                  onChange={(e) => dispatch(setRewardId(e.target.value))}
+                >
+                  {rewards.map((reward) => (
+                    <option key={reward.id} value={reward.id}>
+                      {reward.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div>
+            <button
+              className="rounded px-3 py-2 bg-violet-950/70"
+              onClick={() => {
+                dispatch(disconnect("twitch"));
+              }}
             >
-              {rewards.map((reward) => (
-                <option key={reward.id} value={reward.id}>
-                  {reward.title}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            className="rounded px-3 py-2 bg-violet-950/70"
-            onClick={() => {
-              dispatch(disconnect("twitch"));
-            }}
-          >
-            Disconnect
-          </button>
+              Disconnect
+            </button>
+          </div>
         </div>
       ) : (
-        <a
-          className="inline-block rounded px-3 py-2 bg-violet-700"
-          href={getImplicitGrantUrl("twitch")}
-        >
-          Connect with Twitch
-        </a>
+        <div>
+          <a
+            className="rounded px-3 py-2 bg-violet-950/70"
+            href={getImplicitGrantUrl("twitch")}
+          >
+            Connect with Twitch
+          </a>
+        </div>
       )}
     </div>
   );
