@@ -1,3 +1,5 @@
+import { redirect } from "react-router-dom";
+
 export interface AuthParams {
   clientId: string;
   authUrl: string;
@@ -36,4 +38,8 @@ export function getImplicitGrantUrl(service: Service): string {
       }).toString(),
     })
   );
+}
+
+export function refreshAuthToken(service: Service) {
+  redirect(getImplicitGrantUrl(service));
 }
