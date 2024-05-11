@@ -14,6 +14,9 @@ export default function TwitchPanel() {
   const rewardId = useSelector(
     (state: RootState) => state.settings.twitch.rewardId
   );
+  const online = useSelector(
+    (state: RootState) => state.settings.twitch.online
+  );
   const dispatch = useDispatch();
 
   const [user, setUser] = useState<HelixUser | null>(null);
@@ -31,12 +34,14 @@ export default function TwitchPanel() {
       const apiClient = new ApiClient({ authProvider });
       const tokenInfo = await apiClient.getTokenInfo();
       const user = await apiClient.users.getUserById(tokenInfo.userId!);
+      if (!user) {
+        console.error("User does not exist for twitch token");
+        return;
+      }
       setUser(user);
-      dispatch(setUserId(tokenInfo.userId!));
+      dispatch(setUserId(user.id));
 
-      const rewards = await apiClient.channelPoints.getCustomRewards(
-        tokenInfo.userId!
-      );
+      const rewards = await apiClient.channelPoints.getCustomRewards(user.id);
       setRewards(rewards);
     }
     updateUserInfo();
@@ -48,12 +53,21 @@ export default function TwitchPanel() {
         <div className="flex flex-col gap-2">
           <div>Connected to Twitch</div>
           {user && (
-            <div className="flex gap-2 mt-2 mb-3">
+            <div className="flex gap-2 items-center">
               <img
                 src={user.profilePictureUrl}
                 className="w-6 h-6 rounded-full"
               />
               <p>{user.name}</p>
+              {online ? (
+                <div className="rounded text-xs px-1 py-0.5  bg-red-800">
+                  <span className="relative">LIVE</span>
+                </div>
+              ) : (
+                <div className="rounded text-xs p-1 bg-neutral-900/50">
+                  OFFLINE
+                </div>
+              )}
             </div>
           )}
           {rewards && (

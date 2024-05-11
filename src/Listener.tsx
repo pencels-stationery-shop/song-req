@@ -1,10 +1,11 @@
-import { useSelector } from "react-redux";
-import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useMemo, useState } from "react";
 import { StaticAuthProvider } from "@twurple/auth";
 import { ApiClient } from "@twurple/api";
 import { EventSubWsListener } from "@twurple/eventsub-ws";
 import { RootState } from "./store";
 import { AUTH_PARAMS } from "./auth";
+import { setDisableWhenOffline, setOnline } from "./store/twitchSlice";
 
 async function queryToTrackId(token: string, query: string): Promise<string> {
   if (query.startsWith("https://open.spotify.com/track/")) {
@@ -32,7 +33,8 @@ async function appendTrackToQueue(token: string, trackId: string) {
 }
 
 export default function Listener() {
-  const { userId, rewardId } = useSelector(
+  const dispatch = useDispatch();
+  const { userId, rewardId, disableWhenOffline, online } = useSelector(
     (state: RootState) => state.settings.twitch
   );
   const twitchToken = useSelector(
@@ -42,7 +44,35 @@ export default function Listener() {
     (state: RootState) => state.connections.spotify?.token
   );
 
-  const [listener, setListener] = useState<EventSubWsListener | null>(null);
+  const [, setListener] = useState<EventSubWsListener | null>(null);
+
+  const enabled = useMemo(
+    () =>
+      !!(
+        userId &&
+        rewardId &&
+        twitchToken &&
+        spotifyToken &&
+        !disableWhenOffline
+      ),
+    [disableWhenOffline, rewardId, spotifyToken, twitchToken, userId]
+  );
+
+  useEffect(() => {
+    if (!(userId && twitchToken)) {
+      return;
+    }
+
+    const authProvider = new StaticAuthProvider(
+      AUTH_PARAMS.twitch.clientId,
+      twitchToken
+    );
+    const apiClient = new ApiClient({ authProvider });
+
+    apiClient.streams.getStreamByUserId(userId).then((stream) => {
+      dispatch(setOnline(!!stream));
+    });
+  }, [dispatch, twitchToken, userId]);
 
   useEffect(() => {
     if (!(userId && rewardId && twitchToken && spotifyToken)) {
@@ -55,61 +85,89 @@ export default function Listener() {
       twitchToken
     );
     const apiClient = new ApiClient({ authProvider });
-
     const listener = new EventSubWsListener({ apiClient });
+
     listener.onChannelRedemptionAddForReward(userId, rewardId, async (data) => {
-      console.log(data);
       try {
+        if (disableWhenOffline && !online) {
+          return;
+        }
         const trackId = await queryToTrackId(spotifyToken, data.input);
         await appendTrackToQueue(spotifyToken, trackId);
       } catch (e) {
         console.error(e);
       }
     });
-    setListener(listener);
 
+    listener.onStreamOnline(userId, () => dispatch(setOnline(true)));
+    listener.onStreamOffline(userId, () => dispatch(setOnline(false)));
     listener.start();
+
+    setListener(listener);
 
     return () => {
       listener.stop();
     };
-  }, [rewardId, spotifyToken, twitchToken, userId]);
+  }, [
+    rewardId,
+    spotifyToken,
+    twitchToken,
+    userId,
+    disableWhenOffline,
+    online,
+    dispatch,
+  ]);
 
   return (
-    <div className="p-3 rounded bg-gray-800 text-white">
-      {listener ? (
-        <div className="flex gap-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              fillRule="evenodd"
-              d="M5.636 4.575a.75.75 0 0 1 0 1.061 9 9 0 0 0 0 12.728.75.75 0 1 1-1.06 1.06c-4.101-4.1-4.101-10.748 0-14.849a.75.75 0 0 1 1.06 0Zm12.728 0a.75.75 0 0 1 1.06 0c4.101 4.1 4.101 10.75 0 14.85a.75.75 0 1 1-1.06-1.061 9 9 0 0 0 0-12.728.75.75 0 0 1 0-1.06ZM7.757 6.697a.75.75 0 0 1 0 1.06 6 6 0 0 0 0 8.486.75.75 0 0 1-1.06 1.06 7.5 7.5 0 0 1 0-10.606.75.75 0 0 1 1.06 0Zm8.486 0a.75.75 0 0 1 1.06 0 7.5 7.5 0 0 1 0 10.606.75.75 0 0 1-1.06-1.06 6 6 0 0 0 0-8.486.75.75 0 0 1 0-1.06ZM9.879 8.818a.75.75 0 0 1 0 1.06 3 3 0 0 0 0 4.243.75.75 0 1 1-1.061 1.061 4.5 4.5 0 0 1 0-6.364.75.75 0 0 1 1.06 0Zm4.242 0a.75.75 0 0 1 1.061 0 4.5 4.5 0 0 1 0 6.364.75.75 0 0 1-1.06-1.06 3 3 0 0 0 0-4.243.75.75 0 0 1 0-1.061ZM10.875 12a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Enabled
-        </div>
-      ) : (
-        <div className="flex gap-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              fillRule="evenodd"
-              d="M2.47 2.47a.75.75 0 0 1 1.06 0l8.407 8.407a1.125 1.125 0 0 1 1.186 1.186l1.462 1.461a3.001 3.001 0 0 0-.464-3.645.75.75 0 1 1 1.061-1.061 4.501 4.501 0 0 1 .486 5.79l1.072 1.072a6.001 6.001 0 0 0-.497-7.923.75.75 0 0 1 1.06-1.06 7.501 7.501 0 0 1 .505 10.05l1.064 1.065a9 9 0 0 0-.508-12.176.75.75 0 0 1 1.06-1.06c3.923 3.922 4.093 10.175.512 14.3l1.594 1.594a.75.75 0 1 1-1.06 1.06l-2.106-2.105-2.121-2.122h-.001l-4.705-4.706a.747.747 0 0 1-.127-.126L2.47 3.53a.75.75 0 0 1 0-1.061Zm1.189 4.422a.75.75 0 0 1 .326 1.01 9.004 9.004 0 0 0 1.651 10.462.75.75 0 1 1-1.06 1.06C1.27 16.12.63 11.165 2.648 7.219a.75.75 0 0 1 1.01-.326ZM5.84 9.134a.75.75 0 0 1 .472.95 6 6 0 0 0 1.444 6.159.75.75 0 0 1-1.06 1.06A7.5 7.5 0 0 1 4.89 9.606a.75.75 0 0 1 .95-.472Zm2.341 2.653a.75.75 0 0 1 .848.638c.088.62.37 1.218.849 1.696a.75.75 0 0 1-1.061 1.061 4.483 4.483 0 0 1-1.273-2.546.75.75 0 0 1 .637-.848Z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Disabled
-        </div>
-      )}
+    <div className="p-3 rounded bg-gray-800 text-white grid gap-2">
+      <div>
+        {enabled ? (
+          <div className="flex gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="red"
+              className="w-6 h-6 animate-pulse"
+            >
+              <path d="M9 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
+              <path
+                fillRule="evenodd"
+                d="M9.68 5.26a.75.75 0 0 1 1.06 0 3.875 3.875 0 0 1 0 5.48.75.75 0 1 1-1.06-1.06 2.375 2.375 0 0 0 0-3.36.75.75 0 0 1 0-1.06Zm-3.36 0a.75.75 0 0 1 0 1.06 2.375 2.375 0 0 0 0 3.36.75.75 0 1 1-1.06 1.06 3.875 3.875 0 0 1 0-5.48.75.75 0 0 1 1.06 0Z"
+                clipRule="evenodd"
+              />
+              <path
+                fillRule="evenodd"
+                d="M11.89 3.05a.75.75 0 0 1 1.06 0 7 7 0 0 1 0 9.9.75.75 0 1 1-1.06-1.06 5.5 5.5 0 0 0 0-7.78.75.75 0 0 1 0-1.06Zm-7.78 0a.75.75 0 0 1 0 1.06 5.5 5.5 0 0 0 0 7.78.75.75 0 1 1-1.06 1.06 7 7 0 0 1 0-9.9.75.75 0 0 1 1.06 0Z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Enabled
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="gray"
+              className="w-6 h-6"
+            >
+              <path d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l4.782 4.783a1 1 0 0 0 .935.935l4.783 4.782a.75.75 0 1 0 1.06-1.06L8.998 7.937a1 1 0 0 0-.935-.935L3.28 2.22ZM3.05 12.95a7.003 7.003 0 0 1-1.33-8.047L2.86 6.04a5.501 5.501 0 0 0 1.25 5.849.75.75 0 1 1-1.06 1.06ZM5.26 10.74a3.87 3.87 0 0 1-1.082-3.38L5.87 9.052c.112.226.262.439.45.627a.75.75 0 1 1-1.06 1.061ZM12.95 3.05a7.003 7.003 0 0 1 1.33 8.048l-1.14-1.139a5.501 5.501 0 0 0-1.25-5.848.75.75 0 0 1 1.06-1.06ZM10.74 5.26a3.87 3.87 0 0 1 1.082 3.38L10.13 6.948a2.372 2.372 0 0 0-.45-.627.75.75 0 0 1 1.06-1.061Z" />
+            </svg>
+            Disabled
+          </div>
+        )}
+      </div>
+      <div className="flex gap-2 text-sm">
+        <input
+          type="checkbox"
+          id="disable-when-offline"
+          checked={disableWhenOffline}
+          onChange={(e) => {
+            dispatch(setDisableWhenOffline(e.target.checked));
+          }}
+        />
+        <label htmlFor="disable-when-offline">Disable when offline</label>
+      </div>
     </div>
   );
 }
