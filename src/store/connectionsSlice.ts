@@ -1,23 +1,37 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import { Service } from "../auth";
 
-export type ConnectionsState = Record<Service, string | undefined>;
+export type Connection = {
+  token: string;
+  expires?: Date;
+};
+
+export type ConnectionsState = { [K in Service]?: Connection | undefined };
 
 export interface SetConnectionPayload {
   service: Service;
-  token?: string;
+  token: string;
 }
 
 export const connectionsSlice = createSlice({
   name: "connections",
   initialState: {} as ConnectionsState,
   reducers: {
+    disconnect: (state, action: PayloadAction<Service>) => {
+      delete state[action.payload];
+    },
     setToken: (state, action: PayloadAction<SetConnectionPayload>) => {
-      state[action.payload.service] = action.payload.token;
+      let conn = state[action.payload.service];
+      if (!conn) {
+        conn = {
+          token: action.payload.token,
+        };
+      }
+      state[action.payload.service] = conn;
     },
   },
 });
 
-export const { setToken } = connectionsSlice.actions;
+export const { setToken, disconnect } = connectionsSlice.actions;
 
 export default connectionsSlice.reducer;

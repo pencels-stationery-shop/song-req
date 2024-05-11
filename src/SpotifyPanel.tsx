@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./store";
-import { setToken } from "./store/connectionsSlice";
+import { disconnect } from "./store/connectionsSlice";
 import { getImplicitGrantUrl } from "./auth";
 import SongStatus from "./SongStatus";
 
@@ -32,7 +32,9 @@ interface Artist {
 }
 
 function SpotifyPanel() {
-  const token = useSelector((state: RootState) => state.connections.spotify);
+  const token = useSelector(
+    (state: RootState) => state.connections.spotify?.token
+  );
   const dispatch = useDispatch();
 
   const [user, setUser] = useState<SpotifyUser | null>(null);
@@ -58,8 +60,12 @@ function SpotifyPanel() {
           Authorization: `Bearer ${token}`,
         },
       });
-      const body = await response.json();
-      setPlayback(body);
+      if (response.status == 200) {
+        const body = await response.json();
+        setPlayback(body);
+      } else {
+        setPlayback(null);
+      }
     }
 
     if (token) {
@@ -108,7 +114,7 @@ function SpotifyPanel() {
           <button
             className="rounded px-3 py-2 bg-emerald-950/50"
             onClick={() => {
-              dispatch(setToken({ service: "spotify", token: undefined }));
+              dispatch(disconnect("spotify"));
             }}
           >
             Disconnect

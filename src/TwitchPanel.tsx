@@ -5,10 +5,12 @@ import { ApiClient, HelixCustomReward, HelixUser } from "@twurple/api";
 import { StaticAuthProvider } from "@twurple/auth";
 import { setRewardId, setUserId } from "./store/twitchSlice";
 import { AUTH_PARAMS, getImplicitGrantUrl } from "./auth";
-import { setToken } from "./store/connectionsSlice";
+import { disconnect } from "./store/connectionsSlice";
 
 export default function TwitchPanel() {
-  const token = useSelector((state: RootState) => state.connections.twitch);
+  const token = useSelector(
+    (state: RootState) => state.connections.twitch?.token
+  );
   const rewardId = useSelector(
     (state: RootState) => state.settings.twitch.rewardId
   );
@@ -70,7 +72,7 @@ export default function TwitchPanel() {
           <button
             className="rounded px-3 py-2 bg-violet-950/70"
             onClick={() => {
-              dispatch(setToken({ service: "twitch", token: undefined }));
+              dispatch(disconnect("twitch"));
             }}
           >
             Disconnect

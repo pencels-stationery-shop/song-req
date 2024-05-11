@@ -1,5 +1,3 @@
-import { redirect } from "react-router-dom";
-
 export interface AuthParams {
   clientId: string;
   authUrl: string;
@@ -12,7 +10,11 @@ export const AUTH_PARAMS = {
   twitch: {
     clientId: "2i3u6olpyofmt8tyg6c47esph0io2e",
     authUrl: "https://id.twitch.tv/oauth2/authorize",
-    scopes: ["user:write:chat", "channel:read:redemptions"],
+    scopes: [
+      "user:write:chat",
+      "channel:read:redemptions",
+      "channel:manage:redemptions",
+    ],
   },
   spotify: {
     clientId: "1357399c6d9e4c389b07dc9659da8621",
@@ -41,5 +43,6 @@ export function getImplicitGrantUrl(service: Service): string {
 }
 
 export function refreshAuthToken(service: Service) {
-  redirect(getImplicitGrantUrl(service));
+  // @ts-expect-error It is possible to assign a string to window.location
+  window.location = getImplicitGrantUrl(service);
 }
