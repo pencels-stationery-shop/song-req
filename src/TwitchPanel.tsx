@@ -42,7 +42,7 @@ export default function TwitchPanel() {
       dispatch(setUserId(user.id));
 
       const rewards = await apiClient.channelPoints.getCustomRewards(user.id);
-      setRewards(rewards);
+      setRewards(rewards.filter((reward) => reward.userInputRequired));
     }
     updateUserInfo();
   }, [dispatch, token]);
