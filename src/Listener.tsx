@@ -6,31 +6,8 @@ import { EventSubWsListener } from "@twurple/eventsub-ws";
 import { RootState } from "./store";
 import { AUTH_PARAMS } from "./auth";
 import { setDisableWhenOffline, setOnline } from "./store/twitchSlice";
-
-async function queryToTrackId(token: string, query: string): Promise<string> {
-  if (query.startsWith("https://open.spotify.com/track/")) {
-    const url = new URL(query);
-    return url.pathname.split("/")[2];
-  }
-
-  const response = await fetch(
-    "https://api.spotify.com/v1/search?" +
-      new URLSearchParams({ q: query, type: "track", limit: "1" }),
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
-  const body = await response.json();
-  return body.tracks.items[0]?.id;
-}
-
-async function appendTrackToQueue(token: string, trackId: string) {
-  await fetch(
-    "https://api.spotify.com/v1/me/player/queue?" +
-      new URLSearchParams({ uri: `spotify:track:${trackId}` }),
-    { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-  );
-}
+import { queueRequest, removeRequest } from "./store/spotifySlice";
+import { SpotifyClient } from "./api/spotify";
 
 export default function Listener() {
   const dispatch = useDispatch();
@@ -46,6 +23,10 @@ export default function Listener() {
 
   const [, setListener] = useState<EventSubWsListener | null>(null);
 
+  const spotifyClient = useMemo(
+    () => (spotifyToken ? new SpotifyClient(spotifyToken) : null),
+    [spotifyToken]
+  );
   const enabled = useMemo(
     () =>
       !!(
@@ -75,7 +56,7 @@ export default function Listener() {
   }, [dispatch, twitchToken, userId]);
 
   useEffect(() => {
-    if (!(userId && rewardId && twitchToken && spotifyToken)) {
+    if (!(userId && rewardId && twitchToken && spotifyClient)) {
       setListener(null);
       return;
     }
@@ -88,12 +69,21 @@ export default function Listener() {
     const listener = new EventSubWsListener({ apiClient });
 
     listener.onChannelRedemptionAddForReward(userId, rewardId, async (data) => {
+      // Persist our request in case we need to replay it
+      dispatch(
+        queueRequest({
+          id: data.id,
+          query: data.input,
+        })
+      );
+
       try {
         if (disableWhenOffline && !online) {
           return;
         }
-        const trackId = await queryToTrackId(spotifyToken, data.input);
-        await appendTrackToQueue(spotifyToken, trackId);
+        const trackId = await spotifyClient.queryToTrackId(data.input);
+        await spotifyClient.appendTrackToQueue(trackId);
+        dispatch(removeRequest(data.id));
       } catch (e) {
         console.error(e);
       }
@@ -109,13 +99,13 @@ export default function Listener() {
       listener.stop();
     };
   }, [
+    disableWhenOffline,
+    dispatch,
+    online,
     rewardId,
-    spotifyToken,
+    spotifyClient,
     twitchToken,
     userId,
-    disableWhenOffline,
-    online,
-    dispatch,
   ]);
 
   return (

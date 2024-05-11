@@ -1,35 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./store";
 import { disconnect } from "./store/connectionsSlice";
 import { getImplicitGrantUrl } from "./auth";
 import SongStatus from "./SongStatus";
-
-interface SpotifyUser {
-  display_name: string;
-  images: ImageData[];
-}
-
-interface ImageData {
-  url: string;
-  height: number;
-  width: number;
-}
-
-export interface SpotifyPlayback {
-  progress_ms?: number;
-  item?: SpotifyTrack;
-}
-
-interface SpotifyTrack {
-  name: string;
-  artists: Artist[];
-  duration_ms: number;
-}
-
-interface Artist {
-  name: string;
-}
+import { SpotifyClient, SpotifyPlayback, SpotifyUser } from "./api/spotify";
 
 function SpotifyPanel() {
   const token = useSelector(
@@ -37,49 +12,29 @@ function SpotifyPanel() {
   );
   const dispatch = useDispatch();
 
+  const client = useMemo(
+    () => (token ? new SpotifyClient(token) : null),
+    [token]
+  );
+
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playback, setPlayback] = useState<SpotifyPlayback | null>(null);
 
   useEffect(() => {
-    async function updateUserInfo() {
-      const response = await fetch("https://api.spotify.com/v1/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const body = await response.json();
-      setUser(body);
-    }
-    updateUserInfo();
-  }, [token]);
-
-  useEffect(() => {
-    async function getPlayback() {
-      const response = await fetch("https://api.spotify.com/v1/me/player", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.status == 200) {
-        const body = await response.json();
-        setPlayback(body);
-      } else {
-        setPlayback(null);
-      }
-    }
-
-    if (token) {
-      const intervalId = setInterval(() => {
-        getPlayback();
+    if (client) {
+      client.getUserInfo().then(setUser);
+      const playbackTimer = setInterval(() => {
+        client.getPlayback().then(setPlayback);
       }, 1000);
 
       return () => {
-        clearInterval(intervalId);
+        clearInterval(playbackTimer);
       };
     } else {
+      setUser(null);
       setPlayback(null);
     }
-  }, [token]);
+  }, [client]);
 
   const profile_url = user?.images?.[0]?.url;
 
