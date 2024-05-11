@@ -53,7 +53,7 @@ export default function TwitchPanel() {
         <div className="flex flex-col h-full gap-3 justify-between">
           <div className="flex flex-col gap-3">
             <div>
-              <div className="mb-1">Connected to Twitch</div>
+              <div className="mb-2">Connected to Twitch</div>
               {user && (
                 <div className="flex gap-2 items-center">
                   <img
