@@ -21,12 +21,8 @@ export const connectionsSlice = createSlice({
       delete state[action.payload];
     },
     setToken: (state, action: PayloadAction<SetConnectionPayload>) => {
-      let conn = state[action.payload.service];
-      if (!conn) {
-        conn = {
-          token: action.payload.token,
-        };
-      }
+      const conn = state[action.payload.service] || ({} as Connection);
+      conn.token = action.payload.token;
       state[action.payload.service] = conn;
     },
   },
