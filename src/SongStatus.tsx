@@ -5,7 +5,7 @@ import { SpotifyPlayback } from "./SpotifyPanel";
 dayjs.extend(duration);
 
 export interface SongStatusProps {
-  playback: SpotifyPlayback;
+  playback: SpotifyPlayback | null;
 }
 
 function format(duration?: number): string {
@@ -14,6 +14,14 @@ function format(duration?: number): string {
 }
 
 export default function SongStatus({ playback }: SongStatusProps) {
+  playback ||= {
+    item: {
+      name: "--",
+      artists: [{ name: "--" }],
+      duration_ms: 0,
+    },
+    progress_ms: 0,
+  };
   return (
     <div className="px-3 py-2 rounded text-white bg-black/20">
       <div className="text-xs">Now Playing</div>

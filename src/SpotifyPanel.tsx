@@ -113,7 +113,7 @@ function SpotifyPanel() {
                 </div>
               )}
             </div>
-            {playback && <SongStatus playback={playback} />}
+            {<SongStatus playback={playback} />}
           </div>
           <div>
             <button
