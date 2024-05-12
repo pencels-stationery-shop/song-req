@@ -4,7 +4,7 @@ export interface AuthParams {
   scopes: string[];
 }
 
-export const CALLBACK_PATH = "/auth-callback";
+export const CALLBACK_PATH = "auth-callback";
 
 export const AUTH_PARAMS = {
   twitch: {
