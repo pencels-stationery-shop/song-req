@@ -4,7 +4,7 @@ import Listener from "./Listener";
 
 function App() {
   return (
-    <div className="container mx-auto p-2 flex flex-col gap-2">
+    <div className="container lg:max-w-4xl md:max-w-2xl mx-auto p-2 flex flex-col gap-2">
       <Listener />
       <div className="grid grid-rows-2 lg:grid-rows-1 lg:grid-cols-2 gap-2">
         <TwitchPanel />
