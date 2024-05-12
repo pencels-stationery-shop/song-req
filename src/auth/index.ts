@@ -1,3 +1,5 @@
+import { urlJoin } from "../util";
+
 export interface AuthParams {
   clientId: string;
   authUrl: string;
@@ -32,7 +34,7 @@ export function getImplicitGrantUrl(service: Service): string {
     "?" +
     new URLSearchParams({
       client_id: params.clientId,
-      redirect_uri: new URL(CALLBACK_PATH, window.location.href).toString(),
+      redirect_uri: urlJoin(window.location.href, CALLBACK_PATH),
       response_type: "token",
       scope: params.scopes.join(" "),
       state: new URLSearchParams({
