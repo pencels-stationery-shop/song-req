@@ -1,0 +1,26 @@
+name: Build Site
+
+on:
+  push:
+    branches: [ "trunk" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4.0.0
+    - name: Build
+      run: |
+        pnpm install
+        pnpm build
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v3.0.1
+      with:
+        # Path of the directory containing the static assets.
+        path: dist/
+    - name: Deploy GitHub Pages site
+      uses: actions/deploy-pages@v4.0.5
