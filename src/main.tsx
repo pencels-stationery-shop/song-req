@@ -8,16 +8,21 @@ import { Provider } from "react-redux";
 import { persistor, store } from "./store/index.ts";
 import { PersistGate } from "redux-persist/integration/react";
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <App />,
+    },
+    {
+      path: "/auth-callback",
+      element: <AuthCallback />,
+    },
+  ],
   {
-    path: "/",
-    element: <App />,
-  },
-  {
-    path: "/auth-callback",
-    element: <AuthCallback />,
-  },
-]);
+    basename: "/song-req",
+  }
+);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
