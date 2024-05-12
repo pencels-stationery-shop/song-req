@@ -1,6 +1,5 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useMemo, useState } from "react";
-import { StaticAuthProvider } from "@twurple/auth";
 import { ApiClient } from "@twurple/api";
 import { EventSubWsListener } from "@twurple/eventsub-ws";
 import { RootState } from "./store";
@@ -8,6 +7,7 @@ import { AUTH_PARAMS } from "./auth";
 import { setDisableWhenOffline, setOnline } from "./store/twitchSlice";
 import { queueRequest, removeRequest } from "./store/spotifySlice";
 import { SpotifyClient } from "./api/spotify";
+import { TwitchAuthProvider } from "./auth/twitch";
 
 export default function Listener() {
   const dispatch = useDispatch();
@@ -21,81 +21,68 @@ export default function Listener() {
     (state: RootState) => state.connections.spotify?.token
   );
 
-  const [, setListener] = useState<EventSubWsListener | null>(null);
-
   const spotifyClient = useMemo(
     () => (spotifyToken ? new SpotifyClient(spotifyToken) : null),
     [spotifyToken]
   );
-  const enabled = useMemo(
-    () =>
-      !!(
-        userId &&
-        rewardId &&
-        twitchToken &&
-        spotifyToken &&
-        !disableWhenOffline
-      ),
-    [disableWhenOffline, rewardId, spotifyToken, twitchToken, userId]
-  );
-
-  useEffect(() => {
-    if (!(userId && twitchToken)) {
-      return;
-    }
-
-    const authProvider = new StaticAuthProvider(
+  const twitchClient = useMemo(() => {
+    if (!twitchToken) return null;
+    const authProvider = new TwitchAuthProvider(
       AUTH_PARAMS.twitch.clientId,
       twitchToken
     );
-    const apiClient = new ApiClient({ authProvider });
+    return new ApiClient({ authProvider });
+  }, [twitchToken]);
 
-    apiClient.streams.getStreamByUserId(userId).then((stream) => {
-      dispatch(setOnline(!!stream));
-    });
-  }, [dispatch, twitchToken, userId]);
+  const [listener, setListener] = useState<EventSubWsListener | null>(null);
 
   useEffect(() => {
-    if (!(userId && rewardId && twitchToken && spotifyClient)) {
-      setListener(null);
+    if (!(userId && twitchClient)) {
       return;
     }
 
-    const authProvider = new StaticAuthProvider(
-      AUTH_PARAMS.twitch.clientId,
-      twitchToken
+    const listener = new EventSubWsListener({ apiClient: twitchClient });
+    const onlineListener = listener.onStreamOnline(userId, () =>
+      dispatch(setOnline(true))
     );
-    const apiClient = new ApiClient({ authProvider });
-    const listener = new EventSubWsListener({ apiClient });
+    const offlineListener = listener.onStreamOffline(userId, () =>
+      dispatch(setOnline(false))
+    );
+    let redeemListener:
+      | ReturnType<EventSubWsListener["onChannelRedemptionAddForReward"]>
+      | undefined;
 
-    listener.onChannelRedemptionAddForReward(userId, rewardId, async (data) => {
-      // Persist our request in case we need to replay it
-      dispatch(
-        queueRequest({
-          id: data.id,
-          query: data.input,
-        })
-      );
+    if (
+      userId &&
+      rewardId &&
+      spotifyClient &&
+      (online || !disableWhenOffline)
+    ) {
+      redeemListener = listener.onChannelRedemptionAddForReward(
+        userId,
+        rewardId,
+        async (data) => {
+          // Persist our request in case we need to replay it
+          dispatch(
+            queueRequest({
+              id: data.id,
+              query: data.input,
+            })
+          );
 
-      try {
-        if (disableWhenOffline && !online) {
-          return;
+          const trackId = await spotifyClient.queryToTrackId(data.input);
+          await spotifyClient.appendTrackToQueue(trackId);
+          dispatch(removeRequest(data.id));
         }
-        const trackId = await spotifyClient.queryToTrackId(data.input);
-        await spotifyClient.appendTrackToQueue(trackId);
-        dispatch(removeRequest(data.id));
-      } catch (e) {
-        console.error(e);
-      }
-    });
+      );
+    }
 
-    listener.onStreamOnline(userId, () => dispatch(setOnline(true)));
-    listener.onStreamOffline(userId, () => dispatch(setOnline(false)));
     listener.start();
-
     setListener(listener);
-
     return () => {
+      onlineListener.stop();
+      offlineListener.stop();
+      redeemListener?.stop();
       listener.stop();
     };
   }, [
@@ -104,10 +91,11 @@ export default function Listener() {
     online,
     rewardId,
     spotifyClient,
-    twitchToken,
+    twitchClient,
     userId,
   ]);
 
+  const enabled = !!listener && (online || !disableWhenOffline);
   return (
     <div className="p-3 rounded bg-gray-800 text-white grid gap-2">
       <div>

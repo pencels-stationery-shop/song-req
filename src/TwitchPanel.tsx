@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "./store";
 import { ApiClient, HelixCustomReward, HelixUser } from "@twurple/api";
-import { StaticAuthProvider } from "@twurple/auth";
-import { setRewardId, setUserId } from "./store/twitchSlice";
+import { setOnline, setRewardId, setUserId } from "./store/twitchSlice";
 import { AUTH_PARAMS, getImplicitGrantUrl } from "./auth";
 import { disconnect } from "./store/connectionsSlice";
+import { TwitchAuthProvider } from "./auth/twitch";
 
 export default function TwitchPanel() {
   const token = useSelector(
@@ -27,7 +27,7 @@ export default function TwitchPanel() {
     const accessToken = token;
 
     async function updateUserInfo() {
-      const authProvider = new StaticAuthProvider(
+      const authProvider = new TwitchAuthProvider(
         AUTH_PARAMS.twitch.clientId,
         accessToken
       );
@@ -40,6 +40,9 @@ export default function TwitchPanel() {
       }
       setUser(user);
       dispatch(setUserId(user.id));
+
+      const stream = await apiClient.streams.getStreamByUserId(user.id);
+      dispatch(setOnline(!!stream));
 
       const rewards = await apiClient.channelPoints.getCustomRewards(user.id);
       setRewards(rewards.filter((reward) => reward.userInputRequired));
