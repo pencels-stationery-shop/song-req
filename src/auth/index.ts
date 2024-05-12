@@ -32,7 +32,7 @@ export function getImplicitGrantUrl(service: Service): string {
     "?" +
     new URLSearchParams({
       client_id: params.clientId,
-      redirect_uri: window.location.origin + CALLBACK_PATH,
+      redirect_uri: window.location.href + CALLBACK_PATH,
       response_type: "token",
       scope: params.scopes.join(" "),
       state: new URLSearchParams({
