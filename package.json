@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://pencels-stationery-shop.github.io/song-req/",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
