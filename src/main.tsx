@@ -20,7 +20,7 @@ const router = createBrowserRouter(
     },
   ],
   {
-    basename: "/song-req",
+    basename: import.meta.env.MODE === "development" ? "" : "/song-req",
   }
 );
 
