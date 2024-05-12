@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { SpotifyPlayback } from "./SpotifyPanel";
+import { SpotifyPlayback } from "./api/spotify";
 
 dayjs.extend(duration);
 
