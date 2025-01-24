@@ -5,7 +5,11 @@ import { EventSubWsListener } from "@twurple/eventsub-ws";
 import { RootState } from "./store";
 import { AUTH_PARAMS } from "./auth";
 import { setDisableWhenOffline, setOnline } from "./store/twitchSlice";
-import { queueRequest, removeRequest } from "./store/spotifySlice";
+import {
+  queueRequest,
+  removeRequest,
+  setRequestResult,
+} from "./store/spotifySlice";
 import { SpotifyClient } from "./api/spotify";
 import { TwitchAuthProvider } from "./auth/twitch";
 
@@ -70,9 +74,17 @@ export default function Listener() {
             })
           );
 
-          const trackId = await spotifyClient.queryToTrackId(data.input);
-          await spotifyClient.appendTrackToQueue(trackId);
-          dispatch(removeRequest(data.id));
+          try {
+            const track = await spotifyClient.queryToTrack(data.input);
+            console.log(track);
+            await spotifyClient.appendTrackToQueue(track.id);
+            dispatch(setRequestResult({ id: data.id, result: track }));
+            dispatch(removeRequest(data.id));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } catch (e: any) {
+            console.error(e);
+            dispatch(setRequestResult({ id: data.id, error: e.toString() }));
+          }
         }
       );
     }

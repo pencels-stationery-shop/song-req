@@ -19,9 +19,15 @@ export interface SpotifyPlayback {
 }
 
 export interface SpotifyTrack {
+  id: string;
   name: string;
   artists: Artist[];
   duration_ms: number;
+  album: Album;
+}
+
+export interface Album {
+  images: ImageData[];
 }
 
 export interface Artist {
@@ -46,6 +52,12 @@ export class SpotifyClient {
     if (response.status == 401) {
       refreshAuthToken("spotify");
     }
+    if (!response.ok) {
+      const body = await response.json();
+      throw new Error(
+        `Spotify API call failed (${response.status}): ${JSON.stringify(body)}`
+      );
+    }
     return response;
   }
 
@@ -63,24 +75,36 @@ export class SpotifyClient {
     }
   }
 
-  async queryToTrackId(query: string): Promise<string> {
+  async getTrackInfo(id: string): Promise<SpotifyTrack> {
+    const response = await this.fetch(`/tracks/${id}`);
+    return await response.json();
+  }
+
+  async queryToTrack(query: string): Promise<SpotifyTrack> {
     if (query.startsWith("https://open.spotify.com/track/")) {
       const url = new URL(query);
-      return url.pathname.split("/")[2];
+      return await this.getTrackInfo(url.pathname.split("/")[2]);
     }
 
     const response = await this.fetch(
       "/search?" + new URLSearchParams({ q: query, type: "track", limit: "1" })
     );
     const body = await response.json();
-    return body.tracks.items[0]?.id;
+    if (!response.ok) {
+      throw new Error(`Failed to queue song: ${JSON.stringify(body)}`);
+    }
+    return body.tracks.items[0];
   }
 
   async appendTrackToQueue(trackId: string) {
-    await this.fetch(
+    const response = await this.fetch(
       "/me/player/queue?" +
         new URLSearchParams({ uri: `spotify:track:${trackId}` }),
       { method: "POST" }
     );
+    if (!response.ok) {
+      const body = await response.json();
+      throw new Error(`Failed to queue song: ${JSON.stringify(body)}`);
+    }
   }
 }

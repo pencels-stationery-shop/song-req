@@ -1,6 +1,7 @@
 import TwitchPanel from "./TwitchPanel";
 import SpotifyPanel from "./SpotifyPanel";
 import Listener from "./Listener";
+import HistoryPanel from "./HistoryPanel";
 
 function App() {
   return (
@@ -9,6 +10,7 @@ function App() {
       <div className="flex flex-col gap-2">
         <TwitchPanel />
         <SpotifyPanel />
+        <HistoryPanel />
       </div>
       <div className="lg:mt-3 mx-auto p-3 prose prose-invert prose-sm">
         <h2>How do I use this?</h2>
