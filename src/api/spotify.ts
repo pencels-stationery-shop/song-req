@@ -1,6 +1,7 @@
 import { refreshAuthToken } from "../auth";
 
 export const SPOTIFY_API_URL = "https://api.spotify.com/v1";
+export const SPOTIFY_OEMBED_URL = "https://open.spotify.com/oembed";
 
 export interface SpotifyUser {
   display_name: string;
@@ -80,10 +81,16 @@ export class SpotifyClient {
     return await response.json();
   }
 
+  async getTrackInfoFromUrl(url: string): Promise<SpotifyTrack> {
+    const response = await fetch(SPOTIFY_OEMBED_URL + '?' + new URLSearchParams({ url: url }));
+    const info = await response.json();
+    const expandedUrl = new URL(info.iframe_url);
+    return await this.getTrackInfo(expandedUrl.pathname.split("/")[3]);
+  }
+
   async queryToTrack(query: string): Promise<SpotifyTrack> {
-    if (query.startsWith("https://open.spotify.com/track/")) {
-      const url = new URL(query);
-      return await this.getTrackInfo(url.pathname.split("/")[2]);
+    if (query.startsWith("https://open.spotify.com/track/") || query.startsWith("https://spotify.link/")) {
+      return await this.getTrackInfoFromUrl(query);
     }
 
     const response = await this.fetch(
@@ -99,7 +106,7 @@ export class SpotifyClient {
   async appendTrackToQueue(trackId: string) {
     const response = await this.fetch(
       "/me/player/queue?" +
-        new URLSearchParams({ uri: `spotify:track:${trackId}` }),
+      new URLSearchParams({ uri: `spotify:track:${trackId}` }),
       { method: "POST" }
     );
     if (!response.ok) {
