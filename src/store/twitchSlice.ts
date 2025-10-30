@@ -13,7 +13,7 @@ export const twitchSlice = createSlice({
     disableWhenOffline: true,
   } as TwitchState,
   reducers: {
-    setRewardId: (state, action: PayloadAction<string>) => {
+    setRewardId: (state, action: PayloadAction<string | undefined>) => {
       state.rewardId = action.payload;
     },
     setUserId: (state, action: PayloadAction<string>) => {

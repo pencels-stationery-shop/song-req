@@ -23,6 +23,10 @@ export default function TwitchPanel() {
   const [rewards, setRewards] = useState<HelixCustomReward[] | null>(null);
 
   useEffect(() => {
+    dispatch(setRewardId(rewardId || rewards?.[0].id)); // Default to first reward
+  });
+
+  useEffect(() => {
     if (!token) return;
     const accessToken = token;
 
@@ -45,10 +49,11 @@ export default function TwitchPanel() {
       dispatch(setOnline(!!stream));
 
       const rewards = await apiClient.channelPoints.getCustomRewards(user.id);
-      setRewards(rewards.filter((reward) => reward.userInputRequired));
+      const inputRewards = rewards.filter((reward) => reward.userInputRequired);
+      setRewards(inputRewards);
     }
     updateUserInfo();
-  }, [dispatch, token]);
+  }, [dispatch, token, rewardId]);
 
   return (
     <div className="flex flex-col p-4 rounded bg-violet-900 text-white">

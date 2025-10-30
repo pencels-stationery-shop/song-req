@@ -87,6 +87,7 @@ export default function Listener() {
           }
         }
       );
+      console.log("Set up listener for redeem", rewardId);
     }
 
     listener.start();
