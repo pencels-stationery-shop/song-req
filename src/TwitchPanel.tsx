@@ -20,10 +20,14 @@ export default function TwitchPanel() {
   const dispatch = useDispatch();
 
   const [user, setUser] = useState<HelixUser | null>(null);
-  const [rewards, setRewards] = useState<HelixCustomReward[] | null>(null);
+  const [rewards, setRewards] = useState<HelixCustomReward[]>([]);
 
   useEffect(() => {
-    dispatch(setRewardId(rewardId || rewards?.[0].id)); // Default to first reward
+    if (rewards.length === 0) {
+      return;
+    }
+
+    dispatch(setRewardId(rewardId || rewards[0].id)); // Default to first reward
   });
 
   useEffect(() => {
