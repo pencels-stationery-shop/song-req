@@ -6,6 +6,17 @@ import HistoryPanel from "./HistoryPanel";
 function App() {
   return (
     <div className="container md:max-w-2xl mx-auto p-2 flex flex-col gap-2">
+      <div className="bg-red-500/40 rounded p-3">
+        This app will no longer be maintained. Please head to the new{" "}
+        <a
+          href="https://jukebox.pencels.net"
+          target="_blank"
+          className="underline"
+        >
+          jukebox
+        </a>{" "}
+        app to handle song redeems.
+      </div>
       <Listener />
       <div className="flex flex-col gap-2">
         <TwitchPanel />
